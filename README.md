@@ -108,6 +108,12 @@ One-at-a-time sensitivity cannot see that interaction, and the interaction is th
 value of waiting for a signal depends on how good the signal is *and* on how much time waiting costs, and
 neither assumption decides it alone.
 
+The two charts below are the older one-at-a-time analysis, and unlike everything above they are computed
+from a **single cohort**. They are kept because the shape of the decay sweep is informative, but the
+grid above supersedes the "under three days, flag at admission" reading of the left-hand panel: whether
+that holds depends on how sharp the 24-hour signal is, which a one-at-a-time sweep holds fixed without
+saying so.
+
 ![The crossover](results/window.png)
 
 ![Sensitivity](results/sensitivity.png)
