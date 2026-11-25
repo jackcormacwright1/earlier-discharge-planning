@@ -113,6 +113,39 @@ the number of discharge coordinators. Under a cap of *k* referrals the problem b
 false positive displaces a true one, and the timing trade-off bites. Both versions are computed; the
 capacity one is reported.
 
+## Stability
+
+Every headline number is a mean over 30 simulated cohorts, each resimulated and refitted from scratch
+with its own train/test split. This is not decoration. The first version of this analysis reported one
+cohort, and that cohort turned out to be the most favourable of thirty on the headline measure: 446 bed
+days saved per 1,000 against a mean of 323.5 (sd 46.5), the maximum of the thirty draws. One of its three
+findings — that a ward rule beats every model at admission — did not survive repetition at all, and is
+retracted in the README rather than quietly dropped.
+
+Comparisons between predictors are **paired within cohort**. The cohort draw moves every predictor
+together, so an unpaired comparison of two means across cohorts throws away that pairing and either
+hides a reliable difference in noise or dresses up a coin toss as a result. Paired, the picture is clear:
+
+| Swap | Mean | sd | Positive in |
+|---|---|---|---|
+| Label: delayed-discharge instead of long-stay | +128.4 | 39.7 | 100% |
+| Learner: boosting instead of logistic regression | +7.7 | 16.5 | 63% |
+| Ward rule against the model, both at admission | +3.1 | 16.2 | 53% |
+| Best model at 24h against the ward rule at admission | +45.2 | 34.0 | 97% |
+
+### Varying assumptions together, not one at a time
+
+One-at-a-time sensitivity cannot see an interaction, and the two assumptions this analysis turns on
+interact by construction: how clear the 24-hour therapy signal is (`therapy_noise`) and how fast the
+benefit decays (`useful_window_days`). A sharper 24-hour signal is worth more when the window is short,
+because waiting costs more. Both are varied over a grid, each cell run over several seeds, and the cell
+reports how often each decision point wins rather than which one won once.
+
+24 hours wins in 10 of the 12 combinations. Admission wins only where the window is as short as three
+days *and* the 24-hour signal is blunt; with a sharp signal, 24 hours wins even at a three-day window.
+The earlier one-at-a-time result — "if the window is under three days, flag at admission" — was
+therefore conditional on a signal quality it never stated.
+
 ## What this design cannot tell you
 
 **It cannot tell you the effect size.** Everything scales with the Cochrane estimate, which comes from

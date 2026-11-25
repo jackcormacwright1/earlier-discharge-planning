@@ -118,6 +118,43 @@ def test_training_on_the_delay_label_beats_the_long_stay_label_on_value():
     assert value["delay"] > 1.5 * value["long_stay"]
 
 
+def _value_at(hour, seed, predictors):
+    """Bed days saved per 1,000 for each named predictor, at one decision point, in one cohort."""
+    df = simulate(Cohort().with_(seed=seed))
+    train, test = split(df, seed=seed)
+    econ = Economics()
+    per_patient, _ = effect_per_patient(df, econ)
+    cap = round(econ.capacity_per_1000 * len(test) / 1000)
+    fit = fit_at_hour(train, test, hour, seed=seed)
+    return {name: value_of_referring(test, top_k_by_risk(fit["risk"][name], fit["eligible"], cap),
+                                     hour, econ, per_patient=per_patient)["bed_days_saved_per_1000"]
+            for name in predictors}
+
+
+def test_the_label_is_a_real_effect_and_the_learner_is_not():
+    """Finding 2, across cohorts rather than in one. The label swap has to hold every time; the learner
+    swap has to be allowed to go either way, because it does. A version of this test that pinned the
+    learner swap as positive would be pinning one lucky draw."""
+    label, learner = [], []
+    for seed in range(5):
+        v = _value_at(24, seed, ("delay", "long_stay", "logistic"))
+        label.append(v["delay"] - v["long_stay"])
+        learner.append(v["long_stay"] - v["logistic"])
+    assert all(d > 50 for d in label), "the label swap should help substantially in every cohort"
+    assert min(learner) < 0 < max(learner), "the learner swap should not be a reliable improvement"
+    assert np.mean(label) > 5 * abs(np.mean(learner))
+
+
+def test_at_admission_the_ward_rule_and_the_model_are_a_toss_up():
+    """Finding 3, after repetition retracted the stronger version of it. An earlier README claimed the
+    ward rule beat every model at admission; across cohorts the difference changes sign, so the claim
+    this pins is the weaker one that survived."""
+    gaps = [(lambda v: v["simple"] - v["delay"])(_value_at(0, seed, ("simple", "delay")))
+            for seed in range(6)]
+    assert min(gaps) < 0 < max(gaps), "neither the rule nor the model reliably wins at admission"
+    assert abs(np.mean(gaps)) < 40, "and the average difference is small either way"
+
+
 def test_value_falls_to_nothing_once_the_window_has_closed():
     df = simulate(Cohort(n=5_000))
     econ = Economics(useful_window_days=1.0)
